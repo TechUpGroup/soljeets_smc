@@ -15,7 +15,8 @@ pub struct Update<'info> {
     #[account(
         mut,
         seeds = [CONFIG_SEED],
-        bump
+        bump,
+        has_one = operator
     )]
     pub config: Account<'info, Config>,
 }
