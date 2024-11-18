@@ -8,7 +8,7 @@ use crate::error::ErrorMessage;
 use crate::utils::{
     calculate_fee, transfer_native_to_account, transfer_token_to_account
 };
-use crate::{Config, Vault, ATA_VAULT, CONFIG_SEED, PDA_CHECK, VAULT};
+use crate::{Config, Holder, Vault, ATA_VAULT, CONFIG_SEED, PDA_CHECK, VAULT};
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{Mint, Token, TokenAccount};
@@ -38,17 +38,16 @@ pub struct Buy<'info> {
         constraint = vault.completed == false @ ErrorMessage::TradingEnd
     )]
     pub vault: Box<Account<'info, Vault>>,
-    /// CHECK: only to check buyer can only buy token once
     #[account(
-        init,
-        space = 8,
+        init_if_needed,
+        space = Holder::LEN,
         payer= buyer,
         seeds = [
             PDA_CHECK , buyer.key().as_ref(),mint.key().as_ref(), 
         ],
         bump
     )]
-    pub pda_buyer: AccountInfo<'info>,
+    pub pda_buyer: Box<Account<'info, Holder>>,
     #[account(
         mut,
         seeds=[
@@ -79,21 +78,21 @@ pub struct Buy<'info> {
 pub fn handler_buy(
     ctx: Context<Buy>,
     max_amount_sol: u64,
-) -> Result<(Pubkey, Pubkey, u64, u64, u64, u64, bool)> {
+) -> Result<(Pubkey, Pubkey, u128, u64, u64, u64, bool)> {
     let config_account = &ctx.accounts.config;
     let vault= &mut ctx.accounts.vault;
-    let mut current_total_sol = vault.get_lamports()-1746960u64; // fee init create acc
+    let mut current_total_sol = vault.get_lamports() as u128-1746960u128; // fee init create acc
     require!(max_amount_sol > 0 ,ErrorMessage::InvalidAmountSol);
-    let (amount_sol, _fee_platform, fee_fund) = calculate_fee(
+    let (_, _fee_platform, fee_fund) = calculate_fee(
         max_amount_sol,
         0,
         config_account.fee_fund,
     )
     .unwrap();
 
-    require!(amount_sol > 0, ErrorMessage::InvalidAmountSol);
+    require!(max_amount_sol > 0, ErrorMessage::InvalidAmountSol);
 
-    require!(amount_sol.checked_add(current_total_sol).unwrap().le(&vault.sol_target), ErrorMessage::InvalidAmountSolTrade);
+    require!((max_amount_sol as u128).checked_add(current_total_sol).unwrap().le(&vault.sol_target), ErrorMessage::InvalidAmountSolTrade);
 
     // transfer fee to fee_receiver
     // if fee_platform > 0 {
@@ -123,15 +122,13 @@ pub fn handler_buy(
         ctx.accounts.system_program.to_account_info(),
         None,
     )?;
-    current_total_sol = current_total_sol.checked_add(max_amount_sol).unwrap();
-
+    current_total_sol = current_total_sol.checked_add(max_amount_sol as u128).unwrap();
 
     // calculate token receive
     let token_reserve = ctx.accounts.associate_vault.amount;
+    let amount_token_received_per_slot = vault.amount_token_received_per_slot;
     let price = vault.price;
-
-
-    let amount_token_out = (max_amount_sol as u128).checked_mul(1e6 as u128).unwrap().checked_div(price as u128).unwrap() as u64;
+    let amount_token_out = (amount_token_received_per_slot as u128).checked_mul(max_amount_sol as u128).unwrap().checked_div(price as u128).unwrap() as u64;
     let remaining_token = token_reserve.checked_sub(amount_token_out).unwrap();
 
     require!(
@@ -139,12 +136,11 @@ pub fn handler_buy(
         ErrorMessage::InvalidAmountToken
     );
 
-    let amount_token_holding = ctx.accounts.associate_user.amount + amount_token_out;
+    let pda_buyer = &mut ctx.accounts.pda_buyer;
+    pda_buyer.mint = ctx.accounts.mint.key();
+    pda_buyer.holder = ctx.accounts.buyer.key();
+    pda_buyer.amount_token_received = pda_buyer.amount_token_received.checked_add(amount_token_out).unwrap();
    
-    require!(
-        amount_token_holding <= vault.max_token_buy || ctx.accounts.buyer.key() == vault.creator,
-        ErrorMessage::ExceedMaximum
-    );
     // tranfer token to buyer
     let binding = ctx.accounts.mint.key();
     let seeds = &[&[

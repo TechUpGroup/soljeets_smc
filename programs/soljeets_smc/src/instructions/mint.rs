@@ -59,10 +59,10 @@ pub fn handler_mint(
     ctx: Context<MintToken>,
     creator: Pubkey,
     price: u64,
-    sol_target: u64,
+    sol_target: u128,
     max_buy: u64,
 ) -> Result<()> {
-    require!(sol_target > 10_000_000_000, ErrorMessage::InvalidSolTarget);
+    require!(sol_target > 5_000_000_000, ErrorMessage::InvalidSolTarget);
     let config_account = &ctx.accounts.config;
 
     let seeds = &[&[
@@ -84,6 +84,24 @@ pub fn handler_mint(
     ctx.accounts.vault.token_supply = config_account.initial_token_reserve;
     ctx.accounts.vault.initial_token_reserve = config_account.initial_token_reserve;
     ctx.accounts.vault.initial_token_reserve = config_account.initial_token_reserve;
+
+    let amount_token_trade = config_account
+        .initial_token_reserve
+        .checked_mul(88)
+        .unwrap()
+        .checked_div(100)
+        .unwrap() as u128;
+    let amount_token_received_per_slot = amount_token_trade
+        .checked_div(sol_target.checked_div(price as u128).unwrap())
+        .unwrap() as u64;
+    msg!(
+        "{} {} {} {}",
+        amount_token_trade,
+        amount_token_received_per_slot,
+        price,
+        sol_target
+    );
+    ctx.accounts.vault.amount_token_received_per_slot = amount_token_received_per_slot;
     ctx.accounts.vault.price = price;
     ctx.accounts.vault.sol_target = sol_target;
     ctx.accounts.vault.creator = creator;

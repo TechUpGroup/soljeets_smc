@@ -21,7 +21,7 @@ pub struct TradingEvent {
     pub amount_sol: u64,
     pub amount_token: u64,
     pub is_buy: bool,
-    pub virtual_sol_reserve: u64,
+    pub virtual_sol_reserve: u128,
     pub virtual_token_reserve: u64,
     pub completed: bool,
 }

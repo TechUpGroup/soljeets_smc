@@ -22,14 +22,14 @@ pub enum ErrorMessage {
     InvalidAmountToken,
     #[msg("Trading: Invalid amount of sol available to trade")]
     InvalidAmountSolTrade,
-    #[msg("Fee cannot over 100")]
-    InvalidFee,
     #[msg("Withdraw: Creator invalid")]
     InvalidCreator,
     #[msg("Buy: Exceed max token can hold")]
     ExceedMaximum,
     #[msg("Creator 1st buy: already bought")]
     BuyOnce,
-    #[msg("Sol target must be larger than 10 Sol")]
+    #[msg("Sol target must be larger than 5 Sol")]
     InvalidSolTarget,
+    #[msg("Invalid PDA")]
+    InvalidPda,
 }

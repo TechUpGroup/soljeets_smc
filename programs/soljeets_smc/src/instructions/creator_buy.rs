@@ -68,9 +68,9 @@ pub struct CreatorBuy<'info> {
 
 pub fn handler_creator_buy(
     ctx: Context<CreatorBuy>
-) -> Result<(Pubkey, Pubkey, u64, u64, u64, u64, bool)> {
+) -> Result<(Pubkey, Pubkey, u128, u64, u64, u64, bool)> {
     let vault= &mut ctx.accounts.vault;
-    let current_total_sol = vault.get_lamports()- 1746960u64;
+    let current_total_sol = vault.get_lamports() as u128- 1746960u128;
 
     // calculate token receive
     let token_reserve = ctx.accounts.associate_vault.amount;

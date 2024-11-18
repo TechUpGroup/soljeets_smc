@@ -49,7 +49,7 @@ pub mod soljeets_smc {
         Ok(())
     }
 
-    pub fn mint(ctx: Context<MintToken>, creator: Pubkey,price: u64, sol_target: u64, max_buy: u64) -> Result<()> {
+    pub fn mint(ctx: Context<MintToken>, creator: Pubkey,price: u64, sol_target: u128, max_buy: u64) -> Result<()> {
         handler_mint(ctx,creator,price, sol_target, max_buy)
     }
 
