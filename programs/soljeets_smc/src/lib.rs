@@ -20,7 +20,7 @@ pub use instructions::{
 };
 pub use state::*;
 
-declare_id!("DJxtpd2QfwQxLGfrXpHmoGDUuphpjz2aeud7ZtUXZg68");
+declare_id!("7Xp7mrXFKfUDsUYundLS6vHXRHtjFbsbuwQoVwkmVCMa");
 
 #[program]
 pub mod soljeets_smc {
